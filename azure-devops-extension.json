@@ -1,0 +1,38 @@
+{
+    "manifestVersion": 1,
+    "id": "iteration-work-items-hub",
+    "publisher": "JamesSkemp",
+    "version": "1.0.0",
+    "name": "Iteration Work Items Hub",
+    "description": "Azure DevOps Extension",
+    "categories": [
+        "Azure Repos",
+        "Azure Boards",
+        "Azure Pipelines",
+        "Azure Test Plans",
+        "Azure Artifacts"
+    ],
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "icons": {
+        "default": "logo.png"
+    },
+    "content": {
+        "details": {
+            "path": "overview.md"
+        }
+    },
+    "files": [
+        {
+            "path": "static",
+            "addressable": true
+        },
+        {
+            "path": "dist",
+            "addressable": true
+        }
+    ]
+}
