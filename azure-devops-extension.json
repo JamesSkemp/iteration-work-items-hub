@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "iteration-work-items-hub",
     "publisher": "JamesSkemp",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "name": "Iteration Work Items Hub",
     "description": "Azure DevOps Extension",
     "categories": [
