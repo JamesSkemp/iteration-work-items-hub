@@ -4,7 +4,7 @@
             "id": "hub",
             "type": "ms.vss-web.hub",
             "targets": [
-                "ms.vss-build-web.build-release-hub-group"
+                "ms.vss-work-web.work-hub-group"
             ],
             "includes": [
                 "ms.vss-tfs-web.tfs-page-data-service",
@@ -19,5 +19,8 @@
                 "supportsMobile": true
             }
         }
+    ],
+    "scopes": [
+        "vso.work"
     ]
 }
