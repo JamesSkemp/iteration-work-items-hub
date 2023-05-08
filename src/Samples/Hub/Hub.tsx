@@ -2,18 +2,26 @@ import "./Hub.scss";
 
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { CommonServiceIds, IHostPageLayoutService } from "azure-devops-extension-api";
+import { CommonServiceIds, IHostPageLayoutService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
 
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
 
-import { OverviewTab } from "./OverviewTab"; 
+import { OverviewTab } from "./OverviewTab";
 import { NavigationTab } from "./NavigationTab";
 import { ExtensionDataTab } from "./ExtensionDataTab";
 import { MessagesTab } from "./MessagesTab";
 import { showRootComponent } from "../../Common";
+import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
+import { IListBoxItem } from "azure-devops-ui/ListBox";
+import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
+import { TaskboardColumn, TaskboardColumns, TaskboardWorkItemColumn, WorkRestClient } from "azure-devops-extension-api/Work";
+import { CoreRestClient, WebApiTeam } from "azure-devops-extension-api/Core";
+import { BoardsRestClient } from 'azure-devops-extension-api/Boards';
+import { Dropdown } from "azure-devops-ui/Dropdown";
+import { ListSelection } from "azure-devops-ui/List";
 
 interface IHubContentState {
     selectedTabId: string;
@@ -24,6 +32,16 @@ interface IHubContentState {
 }
 
 class HubContent extends React.Component<{}, IHubContentState> {
+    private project: IProjectInfo | undefined;
+    private teams: WebApiTeam[] = [];
+    private taskboardColumns: TaskboardColumns | undefined;
+    private workItems: WorkItem[] = [];
+
+    private data = new ObservableArray<IListBoxItem<string>>();
+    private workItemTypeValue = new ObservableValue("");
+    private selection = new ListSelection();
+    private workItemTypes: WorkItemType[] = [];
+    private workItemTypesOld = new ObservableArray<IListBoxItem<string>>();
 
     constructor(props: {}) {
         super(props);
@@ -36,12 +54,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     public componentDidMount() {
         SDK.init();
-        this.initializeFullScreenState();
+        this.getCustomData();
     }
 
     public render(): JSX.Element {
 
         const { selectedTabId, headerDescription, useCompactPivots, useLargeTitle } = this.state;
+
 
         return (
             <Page className="sample-hub flex-grow">
@@ -50,6 +69,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     commandBarItems={this.getCommandBarItems()}
                     description={headerDescription}
                     titleSize={useLargeTitle ? TitleSize.Large : TitleSize.Medium} />
+
+                <Dropdown<string>
+                        className="sample-work-item-type-picker"
+                        items={this.data}
+                        onSelect={(event, item) => { this.workItemTypeValue.value = item.data! }}
+                        selection={this.selection}
+                    />
 
                 <TabBar
                     onSelectedTabChanged={this.onSelectedTabChanged}
@@ -65,6 +91,63 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 { this.getPageContent() }
             </Page>
         );
+    }
+
+    private async getCustomData() {
+        await SDK.ready();
+
+        // Get the project.
+        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
+        this.project = await projectService.getProject();
+
+        if (!this.project) {
+            console.log('No project found.');
+            return;
+        }
+
+        console.log(this.project);
+        //this.data.push({ id: this.project.id, data: this.project.name, text: this.project.id + ' ' + this.project.name });
+
+        // Get teams.
+        const coreClient = getClient(CoreRestClient);
+        this.teams = await coreClient.getTeams(this.project.id);
+        console.log('need one of these teams');
+        console.log(this.teams);
+
+        let teamId = "1e538049-e108-44be-9480-74fbfc79500f";
+
+        const teamContext = { projectId: this.project.id, teamId: teamId, project: "", team: "" };
+
+        // Get taskboard columns.
+        const workClient = getClient(WorkRestClient);
+        const iterations = await workClient.getTeamIterations(teamContext);
+        console.log('need one of these iterations');
+        console.log(iterations); // 8
+
+        let iterationId = "7e52b420-0877-4c87-bfed-54637e976bdc";
+
+        const iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
+        console.log('need this list of items');
+        console.log(iterationWorkItems); // 10 (stories + tasks + bugs)
+
+        this.taskboardColumns = await workClient.getColumns(teamContext);
+        console.log('need this list of columns');
+        console.log(this.taskboardColumns); // 5 - need this
+
+        const workItemColumns = await workClient.getWorkItemColumns(teamContext, iterationId);
+        console.log(workItemColumns); // 6 (does not include user stories)
+
+        const teamIteration = await workClient.getTeamIteration(teamContext, iterationId);
+        console.log(teamIteration);
+
+        const witClient = getClient(WorkItemTrackingRestClient);
+        // TODO handle more than 200 work items
+        this.workItems = await witClient.getWorkItems(iterationWorkItems.workItemRelations.map(wi => wi.target.id));
+        console.log(this.workItems);
+
+        this.workItemTypes = await witClient.getWorkItemTypes(this.project.id);
+        // will probably just hard-code these
+        console.log(this.workItemTypes);
     }
 
     private onSelectedTabChanged = (newTabId: string) => {
@@ -174,14 +257,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
         });
     }
 
-    private async initializeFullScreenState() {
-        const layoutService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-        const fullScreenMode = await layoutService.getFullScreenMode();
-        if (fullScreenMode !== this.state.fullScreenMode) {
-            this.setState({ fullScreenMode });
-        }
-    }
-
     private async onToggleFullScreenMode(): Promise<void> {
         const fullScreenMode = !this.state.fullScreenMode;
         this.setState({ fullScreenMode });
@@ -192,3 +267,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 }
 
 showRootComponent(<HubContent />);
+
+function localeIgnoreCaseComparer(a: string, b: string): number {
+    throw new Error("Function not implemented.");
+}
