@@ -17,9 +17,8 @@ import { showRootComponent } from "../../Common";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
-import { TaskboardColumn, TaskboardColumns, TaskboardWorkItemColumn, WorkRestClient } from "azure-devops-extension-api/Work";
+import { IterationWorkItems, TaskboardColumns, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
 import { CoreRestClient, WebApiTeam } from "azure-devops-extension-api/Core";
-import { BoardsRestClient } from 'azure-devops-extension-api/Boards';
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
 
@@ -34,13 +33,15 @@ interface IHubContentState {
 class HubContent extends React.Component<{}, IHubContentState> {
     private project: IProjectInfo | undefined;
     private teams: WebApiTeam[] = [];
+    private teamIterations: TeamSettingsIteration[] = [];
+    private iterationWorkItems: IterationWorkItems | undefined;
     private taskboardColumns: TaskboardColumns | undefined;
     private workItems: WorkItem[] = [];
+    private workItemTypes: WorkItemType[] = [];
 
     private data = new ObservableArray<IListBoxItem<string>>();
     private workItemTypeValue = new ObservableValue("");
     private selection = new ListSelection();
-    private workItemTypes: WorkItemType[] = [];
     private workItemTypesOld = new ObservableArray<IListBoxItem<string>>();
 
     constructor(props: {}) {
@@ -120,15 +121,15 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         // Get taskboard columns.
         const workClient = getClient(WorkRestClient);
-        const iterations = await workClient.getTeamIterations(teamContext);
+        this.teamIterations = await workClient.getTeamIterations(teamContext);
         console.log('need one of these iterations');
-        console.log(iterations); // 8
+        console.log(this.teamIterations); // 8
 
         let iterationId = "7e52b420-0877-4c87-bfed-54637e976bdc";
 
-        const iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
-        console.log('need this list of items');
-        console.log(iterationWorkItems); // 10 (stories + tasks + bugs)
+        this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
+        console.log('need this list of item relations');
+        console.log(this.iterationWorkItems); // 10 (stories + tasks + bugs)
 
         this.taskboardColumns = await workClient.getColumns(teamContext);
         console.log('need this list of columns');
@@ -142,7 +143,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         const witClient = getClient(WorkItemTrackingRestClient);
         // TODO handle more than 200 work items
-        this.workItems = await witClient.getWorkItems(iterationWorkItems.workItemRelations.map(wi => wi.target.id));
+        this.workItems = await witClient.getWorkItems(this.iterationWorkItems.workItemRelations.map(wi => wi.target.id));
+        console.log('need this list of work items');
         console.log(this.workItems);
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.project.id);
@@ -193,14 +195,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
               tooltipProps: {
                 text: "Open a simple message dialog"
               }
-            },
-            {
-                id: "fullScreen",
-                ariaLabel: this.state.fullScreenMode ? "Exit full screen mode" : "Enter full screen mode",
-                iconProps: {
-                    iconName: this.state.fullScreenMode ? "BackToWindow" : "FullScreen"
-                },
-                onActivate: () => { this.onToggleFullScreenMode() }
             },
             {
               id: "customDialog",
@@ -256,18 +250,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
             }
         });
     }
-
-    private async onToggleFullScreenMode(): Promise<void> {
-        const fullScreenMode = !this.state.fullScreenMode;
-        this.setState({ fullScreenMode });
-
-        const layoutService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-        layoutService.setFullScreenMode(fullScreenMode);
-    }
 }
 
 showRootComponent(<HubContent />);
-
-function localeIgnoreCaseComparer(a: string, b: string): number {
-    throw new Error("Function not implemented.");
-}
