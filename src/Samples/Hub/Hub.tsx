@@ -62,7 +62,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         const { selectedTabId, headerDescription, useCompactPivots, useLargeTitle } = this.state;
 
-
         return (
             <Page className="sample-hub flex-grow">
 
@@ -115,7 +114,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
         console.log('need one of these teams');
         console.log(this.teams);
 
-        let teamId = "1e538049-e108-44be-9480-74fbfc79500f";
+        let teamId = "";
+        if (this.teams.length === 1) {
+            teamId = this.teams[0].id;
+        } else {
+            //teamId = "1e538049-e108-44be-9480-74fbfc79500f";
+            teamId = "a9cf85f0-07c4-4a9a-9442-703b164496c6";
+        }
 
         const teamContext = { projectId: this.project.id, teamId: teamId, project: "", team: "" };
 
@@ -125,7 +130,17 @@ class HubContent extends React.Component<{}, IHubContentState> {
         console.log('need one of these iterations');
         console.log(this.teamIterations); // 8
 
-        let iterationId = "7e52b420-0877-4c87-bfed-54637e976bdc";
+        let iterationId = "";
+        if (this.teamIterations.length === 1) {
+            iterationId = this.teamIterations[0].id;
+        } else {
+            iterationId = "7e52b420-0877-4c87-bfed-54637e976bdc";
+
+            let currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
+            if (currentIteration) {
+                iterationId = currentIteration.id;
+            }
+        }
 
         this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
         console.log('need this list of item relations');
