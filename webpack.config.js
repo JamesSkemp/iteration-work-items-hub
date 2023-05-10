@@ -42,20 +42,18 @@ module.exports = {
                 use: ["style-loader", "css-loader"],
             },
             {
-                test: /\.woff$/,
-                use: [{
-                    loader: 'base64-inline-loader'
-                }]
-            },
-            {
                 test: /\.html$/,
                 loader: "file-loader"
+            },
+            {
+                test: /\.woff$/,
+                type: 'asset/inline'
             }
         ]
     },
     plugins: [
         new CopyWebpackPlugin({
-           patterns: [ 
+           patterns: [
                { from: "**/*.html", context: "src/Samples" }
            ]
         })

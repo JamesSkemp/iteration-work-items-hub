@@ -1,3 +1,4 @@
+import "azure-devops-ui/Core/override.css";
 import "./Hub.scss";
 
 import * as React from "react";
