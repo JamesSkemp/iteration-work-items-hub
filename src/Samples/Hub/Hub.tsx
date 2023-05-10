@@ -3,13 +3,14 @@ import "./Hub.scss";
 
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { CommonServiceIds, IHostPageLayoutService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
+import { CommonServiceIds, IGlobalMessagesService, IHostPageLayoutService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
 
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
 import { IListItemDetails, ListItem } from 'azure-devops-ui/List';
+import { DropdownSelection } from "azure-devops-ui/Utilities/DropdownSelection";
 
 import { OverviewTab } from "./OverviewTab";
 import { NavigationTab } from "./NavigationTab";
@@ -33,6 +34,8 @@ interface IHubContentState {
 
     teams: WebApiTeam[];
     teamIterations: TeamSettingsIteration[];
+    selectedTeam: string;
+    selectedTeamIteration: string;
     iterationWorkItems?: IterationWorkItems;
     taskboardColumns?: TaskboardColumns;
     workItems: WorkItem[];
@@ -48,7 +51,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
     private workItems: WorkItem[] = [];
     private workItemTypes: WorkItemType[] = [];
 
-    private teamSelection = new ListSelection(true);
+    private teamSelection = new ListSelection();
+    private teamIterationSelection = new ListSelection();
     private teamItems = new ArrayItemProvider(this.teams);
 
     private data = new ObservableArray<IListBoxItem<string>>();
@@ -63,6 +67,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTabId: "overview",
             teams: [],
             teamIterations: [],
+            selectedTeam: '',
+            selectedTeamIteration: '',
             workItems: [],
             workItemTypes: []
         };
@@ -86,6 +92,26 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 </li>
             );
         });
+
+        function teamDropdownItems(): Array<IListBoxItem<{}>> {
+            if (teams) {
+                return teams.map<IListBoxItem<{}>>(team => ({
+                    id: team.id, text: team.name
+                }));
+            } else {
+                return [];
+            }
+        }
+
+        function teamIterationDropdownItems(): Array<IListBoxItem<{}>> {
+            if (teamIterations) {
+                return teamIterations.map<IListBoxItem<{}>>(teamIteration => ({
+                    id: teamIteration.id, text: teamIteration.name
+                }));
+            } else {
+                return [];
+            }
+        }
 
         const theTeamIterations = teamIterations.map((teamIteration, index) => {
             return (
@@ -135,12 +161,29 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     description={headerDescription}
                     titleSize={useLargeTitle ? TitleSize.Large : TitleSize.Medium} />
 
-                <Dropdown<string>
-                        className="sample-work-item-type-picker"
-                        items={this.data}
-                        onSelect={(event, item) => { this.workItemTypeValue.value = item.data! }}
-                        selection={this.selection}
-                    />
+                <h2>Select a Team</h2>
+                <Dropdown
+                    ariaLabel="Select a team"
+                    className="example-dropdown"
+                    placeholder="Select a Team"
+                    items={teamDropdownItems()}
+                    selection={this.teamSelection}
+                    onSelect={this.handleSelectTeam}
+                />
+
+                <h2>Select an Iteration</h2>
+                <Dropdown
+                    ariaLabel="Select a team iteration"
+                    className="example-dropdown"
+                    placeholder="Select a Team Iteration"
+                    items={teamIterationDropdownItems()}
+                    selection={this.teamIterationSelection}
+                    onSelect={this.handleSelectTeamIteration}
+                />
+
+                <ol>{theWorkItems}</ol>
+
+                <ul>{theWorkItemTypes}</ul>
 
                 <TabBar
                     onSelectedTabChanged={this.onSelectedTabChanged}
@@ -152,14 +195,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     <Tab name="Extension Data" id="extensionData" />
                     <Tab name="Messages" id="messages" />
                 </TabBar>
-
-                <ul>{theTeams}</ul>
-
-                <ul>{theTeamIterations}</ul>
-
-                <ol>{theWorkItems}</ol>
-
-                <ul>{theWorkItemTypes}</ul>
 
                 { this.getPageContent() }
             </Page>
@@ -174,23 +209,25 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.project = await projectService.getProject();
 
         if (!this.project) {
-            console.log('No project found.');
+            this.showToast('No projects found.');
             return;
         }
-
-        console.log(this.project);
-        //this.data.push({ id: this.project.id, data: this.project.name, text: this.project.id + ' ' + this.project.name });
 
         // Get teams.
         const coreClient = getClient(CoreRestClient);
         this.teams = await coreClient.getTeams(this.project.id);
+        if (!this.teams) {
+            this.showToast('No teams found.');
+            return;
+        }
         this.setState({ teams: this.teams });
-        console.log('need one of these teams');
-        console.log(this.teams);
 
         let teamId = "";
         if (this.teams.length === 1) {
             teamId = this.teams[0].id;
+            this.setState({
+                selectedTeam: this.teams[0].id
+            });
         } else {
             //teamId = "1e538049-e108-44be-9480-74fbfc79500f";
             teamId = "a9cf85f0-07c4-4a9a-9442-703b164496c6";
@@ -250,6 +287,23 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({
             selectedTabId: newTabId
         })
+    }
+
+    private handleSelectTeam = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
+        console.log(item);
+        this.setState({
+            selectedTeam: item.id
+        });
+        this.setState({
+            selectedTeamIteration: ''
+        });
+    }
+
+    private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
+        console.log(item);
+        this.setState({
+            selectedTeamIteration: item.id
+        });
     }
 
     private getPageContent() {
@@ -342,6 +396,14 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     this.setState({ headerDescription: result ? "This is a header description" : undefined });
                 }
             }
+        });
+    }
+
+    private showToast = async (message: string): Promise<void> => {
+        const globalMessagesSvc = await SDK.getService<IGlobalMessagesService>(CommonServiceIds.GlobalMessagesService);
+        globalMessagesSvc.addToast({
+            duration: 3000,
+            message: message
         });
     }
 }
