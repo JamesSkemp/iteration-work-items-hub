@@ -13,7 +13,7 @@
                 "ms.vss-features.host-dialog-service"
             ],
             "properties": {
-                "name": "Custom hub",
+                "name": "Iteration Work Items Hub (WIP)",
                 "uri": "dist/Hub/Hub.html",
                 "icon": "asset://static/sample-icon.png",
                 "supportsMobile": true

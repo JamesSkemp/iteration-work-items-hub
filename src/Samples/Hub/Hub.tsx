@@ -9,6 +9,7 @@ import { Header, TitleSize } from "azure-devops-ui/Header";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
+import { IListItemDetails, ListItem } from 'azure-devops-ui/List';
 
 import { OverviewTab } from "./OverviewTab";
 import { NavigationTab } from "./NavigationTab";
@@ -22,13 +23,20 @@ import { IterationWorkItems, TaskboardColumns, TeamSettingsIteration, WorkRestCl
 import { CoreRestClient, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
+import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
 
 interface IHubContentState {
     selectedTabId: string;
-    fullScreenMode: boolean;
     headerDescription?: string;
     useLargeTitle?: boolean;
     useCompactPivots?: boolean;
+
+    teams: WebApiTeam[];
+    teamIterations: TeamSettingsIteration[];
+    iterationWorkItems?: IterationWorkItems;
+    taskboardColumns?: TaskboardColumns;
+    workItems: WorkItem[];
+    workItemTypes: WorkItemType[];
 }
 
 class HubContent extends React.Component<{}, IHubContentState> {
@@ -40,6 +48,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
     private workItems: WorkItem[] = [];
     private workItemTypes: WorkItemType[] = [];
 
+    private teamSelection = new ListSelection(true);
+    private teamItems = new ArrayItemProvider(this.teams);
+
     private data = new ObservableArray<IListBoxItem<string>>();
     private workItemTypeValue = new ObservableValue("");
     private selection = new ListSelection();
@@ -50,7 +61,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         this.state = {
             selectedTabId: "overview",
-            fullScreenMode: false
+            teams: [],
+            teamIterations: [],
+            workItems: [],
+            workItemTypes: []
         };
     }
 
@@ -60,13 +74,63 @@ class HubContent extends React.Component<{}, IHubContentState> {
     }
 
     public render(): JSX.Element {
+        const {
+            selectedTabId, headerDescription, useCompactPivots, useLargeTitle,
+            teams, teamIterations, iterationWorkItems, taskboardColumns, workItems, workItemTypes
+        } = this.state;
 
-        const { selectedTabId, headerDescription, useCompactPivots, useLargeTitle } = this.state;
+        const theTeams = teams.map((team, index) => {
+            return (
+                <li key={team.id}>
+                    {team.name}
+                </li>
+            );
+        });
+
+        const theTeamIterations = teamIterations.map((teamIteration, index) => {
+            return (
+                <li key={teamIteration.id}>
+                    {teamIteration.name}
+                </li>
+            );
+        });
+
+        const theIterationWorkItems = iterationWorkItems?.workItemRelations.map((workItemRelation, index) => {
+            return (
+                <li key={workItemRelation.target.id}>
+                    {workItemRelation.target.id} : {workItemRelation.source?.id}
+                </li>
+            );
+        });
+
+        const theTaskBoardColumns = taskboardColumns?.columns.map((taskboardColumn, index) => {
+            return (
+                <li key={taskboardColumn.id}>
+                    {taskboardColumn.name}
+                </li>
+            );
+        });
+
+        const theWorkItems = workItems.map((workItem, index) => {
+            return (
+                <li key={workItem.id}>
+                    {workItem.fields['System.Title']}
+                </li>
+            );
+        });
+
+        const theWorkItemTypes = workItemTypes.map((workItemType, index) => {
+            return (
+                <li key={index}>
+                    {workItemType.name}
+                </li>
+            );
+        });
 
         return (
             <Page className="sample-hub flex-grow">
 
-                <Header title="Sample Hub"
+                <Header title="Iteration Work Items Hub"
                     commandBarItems={this.getCommandBarItems()}
                     description={headerDescription}
                     titleSize={useLargeTitle ? TitleSize.Large : TitleSize.Medium} />
@@ -88,6 +152,14 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     <Tab name="Extension Data" id="extensionData" />
                     <Tab name="Messages" id="messages" />
                 </TabBar>
+
+                <ul>{theTeams}</ul>
+
+                <ul>{theTeamIterations}</ul>
+
+                <ol>{theWorkItems}</ol>
+
+                <ul>{theWorkItemTypes}</ul>
 
                 { this.getPageContent() }
             </Page>
@@ -112,6 +184,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         // Get teams.
         const coreClient = getClient(CoreRestClient);
         this.teams = await coreClient.getTeams(this.project.id);
+        this.setState({ teams: this.teams });
         console.log('need one of these teams');
         console.log(this.teams);
 
@@ -130,6 +203,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.teamIterations = await workClient.getTeamIterations(teamContext);
         console.log('need one of these iterations');
         console.log(this.teamIterations); // 8
+        this.setState({ teamIterations: this.teamIterations });
 
         let iterationId = "";
         if (this.teamIterations.length === 1) {
@@ -146,10 +220,12 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
         console.log('need this list of item relations');
         console.log(this.iterationWorkItems); // 10 (stories + tasks + bugs)
+        this.setState({ iterationWorkItems: this.iterationWorkItems });
 
         this.taskboardColumns = await workClient.getColumns(teamContext);
         console.log('need this list of columns');
         console.log(this.taskboardColumns); // 5 - need this
+        this.setState({ taskboardColumns: this.taskboardColumns });
 
         const workItemColumns = await workClient.getWorkItemColumns(teamContext, iterationId);
         console.log(workItemColumns); // 6 (does not include user stories)
@@ -162,10 +238,12 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.workItems = await witClient.getWorkItems(this.iterationWorkItems.workItemRelations.map(wi => wi.target.id));
         console.log('need this list of work items');
         console.log(this.workItems);
+        this.setState({ workItems: this.workItems });
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.project.id);
         // will probably just hard-code these
         console.log(this.workItemTypes);
+        this.setState({ workItemTypes: this.workItemTypes });
     }
 
     private onSelectedTabChanged = (newTabId: string) => {
