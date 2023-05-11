@@ -9,22 +9,18 @@ import { Header, TitleSize } from "azure-devops-ui/Header";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
-import { IListItemDetails, ListItem } from 'azure-devops-ui/List';
-import { DropdownSelection } from "azure-devops-ui/Utilities/DropdownSelection";
 
 import { OverviewTab } from "./OverviewTab";
 import { NavigationTab } from "./NavigationTab";
 import { ExtensionDataTab } from "./ExtensionDataTab";
 import { MessagesTab } from "./MessagesTab";
 import { showRootComponent } from "../../Common";
-import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
 import { IterationWorkItems, TaskboardColumns, TaskboardWorkItemColumn, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
 import { CoreRestClient, ProjectInfo, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
-import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
 
 interface IHubContentState {
     selectedTabId: string;
@@ -39,8 +35,14 @@ interface IHubContentState {
     selectedTeamIteration: string;
     iterationWorkItems?: IterationWorkItems;
     taskboardWorkItemColumns: TaskboardWorkItemColumn[];
+    /**
+     * All columns used in project team taskboards.
+     */
     taskboardColumns?: TaskboardColumns;
     workItems: WorkItem[];
+    /**
+     * All work item types, such as Feature, Epic, Bug, Task, User Story.
+     */
     workItemTypes: WorkItemType[];
 }
 
@@ -55,12 +57,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private teamSelection = new ListSelection();
     private teamIterationSelection = new ListSelection();
-    private teamItems = new ArrayItemProvider(this.teams);
-
-    private data = new ObservableArray<IListBoxItem<string>>();
-    private workItemTypeValue = new ObservableValue("");
-    private selection = new ListSelection();
-    private workItemTypesOld = new ObservableArray<IListBoxItem<string>>();
 
     constructor(props: {}) {
         super(props);
@@ -86,18 +82,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
     public render(): JSX.Element {
         const {
             selectedTabId, headerDescription, useCompactPivots, useLargeTitle,
-            teams, teamIterations, iterationWorkItems, taskboardColumns, workItems, workItemTypes
+            teams, teamIterations, workItems
         } = this.state;
 
         const interestedWorkItemTypes = ['Epic', 'Feature', 'User Story', 'Task', 'Bug'];
-
-        const theTeams = teams.map((team, index) => {
-            return (
-                <li key={team.id}>
-                    {team.name}
-                </li>
-            );
-        });
 
         function teamDropdownItems(): Array<IListBoxItem<{}>> {
             if (teams) {
@@ -119,14 +107,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
             }
         }
 
-        const theTaskboardColumns = taskboardColumns?.columns.map(taskboardColumn => {
-            return (
-                <li key={taskboardColumn.id}>
-                    {taskboardColumn.name}
-                </li>
-            );
-        });
-
         /**
          * Returns all work items (user stories, tasks, bugs) as a custom object for later display.
          */
@@ -135,7 +115,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 id: workItem.id,
                 title: workItem.fields['System.Title'],
                 assignedTo: workItem.fields['System.AssignedTo'] ? workItem.fields['System.AssignedTo'].displayName : 'unassigned',
-                workItemUrl: workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/'),
+                url: workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/'),
                 boardColumn: workItem.fields['System.BoardColumn'],
                 state: workItem.fields['System.State'],
                 type: workItem.fields['System.WorkItemType']
@@ -156,29 +136,16 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 return;
             }
 
-            //let sortedColumnWorkItems: [];
-            /*if (this.state.taskboardColumns) {
-                const sortedColumnWorkItems = this.state.taskboardColumns?.columns.map(taskboardColumn => {
-                    const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => {
-                        const workItem = this.state.taskboardWorkItemColumns.find(c => c.workItemId === wi.id && c.column === taskboardColumn.name);
-                        if (workItem) {
-                            return (
-
-                            )
-                        }
-                    });
-
-                });
-            }*/
-
-            /*const sortedColumnWorkItems = this.state.taskboardWorkItemColumns.map(workItemColumn => {
-                const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => {
-                    const workItem = this.state.taskboardWorkItemColumns.find(c => c.workItemId === wi.id && c.column === workItemColumn.);
-                    if (workItem) {
-
-                    }
-                });
-            })*/
+            const workItems = typeMatchingWorkItems.map(workItem => {
+                return (
+                    <li key={workItem.id}>
+                        <a href={workItem.url}>{workItem.id}</a> : {workItem.title} ({workItem.assignedTo})
+                        <br />{workItem.boardColumn}
+                        <br />{workItem.state}
+                        <br />{workItem.type}
+                    </li>
+                );
+            });
 
             console.log(workItemType);
             console.log(typeMatchingWorkItems);
@@ -186,29 +153,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             return (
                 <React.Fragment>
                     <h2>{workItemType}</h2>
+                    <ul>{workItems}</ul>
                 </React.Fragment>
-            );
-        });
-
-        const theWorkItems = workItems.map(workItem => {
-            const workItemUrl = workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/');
-            const assignedTo = workItem.fields['System.AssignedTo'] ? workItem.fields['System.AssignedTo'].displayName : 'unassigned';
-
-            return (
-                <li key={workItem.id}>
-                    <a href={workItemUrl}>{workItem.id}</a> : {workItem.fields['System.Title']} ({assignedTo})
-                    <br />{workItem.fields['System.BoardColumn']}
-                    <br />{workItem.fields['System.State']}
-                    <br />{workItem.fields['System.WorkItemType']}
-                </li>
-            );
-        });
-
-        const theWorkItemTypes = workItemTypes.map((workItemType, index) => {
-            return (
-                <li key={index}>
-                    {workItemType.name}
-                </li>
             );
         });
 
@@ -240,13 +186,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     onSelect={this.handleSelectTeamIteration}
                 />
 
-                <ul>{theTaskboardColumns}</ul>
-
                 {sortedWorkItems}
-
-                <ol>{theWorkItems}</ol>
-
-                <ul>{theWorkItemTypes}</ul>
 
                 <TabBar
                     onSelectedTabChanged={this.onSelectedTabChanged}
