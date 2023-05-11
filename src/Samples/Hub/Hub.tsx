@@ -238,29 +238,41 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private async getTeamData() {
         await SDK.ready();
-
         const teamContext = { projectId: this.state.project, teamId: this.state.selectedTeam, project: "", team: "" };
 
         // Get taskboard columns.
         const workClient = getClient(WorkRestClient);
         this.teamIterations = await workClient.getTeamIterations(teamContext);
-        console.log('need one of these iterations');
-        console.log(this.teamIterations); // 8
+        if (!this.teamIterations) {
+            this.showToast('No team iterations found.');
+            return;
+        }
         this.setState({ teamIterations: this.teamIterations });
 
         let iterationId = "";
         if (this.teamIterations.length === 1) {
             iterationId = this.teamIterations[0].id;
         } else {
-            iterationId = "7e52b420-0877-4c87-bfed-54637e976bdc";
-
             let currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
             if (currentIteration) {
                 iterationId = currentIteration.id;
             }
         }
 
-        this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, iterationId);
+        if (iterationId !== '') {
+            this.setState({
+                selectedTeamIteration: iterationId
+            });
+            this.getTeamIterationData();
+        }
+    }
+
+    private async getTeamIterationData() {
+        await SDK.ready();
+        const teamContext = { projectId: this.state.project, teamId: this.state.selectedTeam, project: "", team: "" };
+
+        const workClient = getClient(WorkRestClient);
+        this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, this.state.selectedTeamIteration);
         console.log('need this list of item relations');
         console.log(this.iterationWorkItems); // 10 (stories + tasks + bugs)
         this.setState({ iterationWorkItems: this.iterationWorkItems });
@@ -270,10 +282,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
         console.log(this.taskboardColumns); // 5 - need this
         this.setState({ taskboardColumns: this.taskboardColumns });
 
-        const workItemColumns = await workClient.getWorkItemColumns(teamContext, iterationId);
+        const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
         console.log(workItemColumns); // 6 (does not include user stories)
 
-        const teamIteration = await workClient.getTeamIteration(teamContext, iterationId);
+        const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
         console.log(teamIteration);
 
         const witClient = getClient(WorkItemTrackingRestClient);
@@ -296,7 +308,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
     }
 
     private handleSelectTeam = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
-        console.log(item);
         this.setState({
             selectedTeam: item.id
         });
@@ -307,10 +318,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
     }
 
     private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
-        console.log(item);
         this.setState({
             selectedTeamIteration: item.id
         });
+        this.getTeamIterationData();
     }
 
     private getPageContent() {
