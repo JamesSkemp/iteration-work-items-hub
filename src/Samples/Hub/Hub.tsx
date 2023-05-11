@@ -20,7 +20,7 @@ import { showRootComponent } from "../../Common";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
-import { IterationWorkItems, TaskboardColumns, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
+import { IterationWorkItems, TaskboardColumns, TaskboardWorkItemColumn, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
 import { CoreRestClient, ProjectInfo, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
@@ -38,6 +38,7 @@ interface IHubContentState {
     selectedTeam: string;
     selectedTeamIteration: string;
     iterationWorkItems?: IterationWorkItems;
+    taskboardWorkItemColumns: TaskboardWorkItemColumn[];
     taskboardColumns?: TaskboardColumns;
     workItems: WorkItem[];
     workItemTypes: WorkItemType[];
@@ -71,6 +72,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             teamIterations: [],
             selectedTeam: '',
             selectedTeamIteration: '',
+            taskboardWorkItemColumns: [],
             workItems: [],
             workItemTypes: []
         };
@@ -86,6 +88,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTabId, headerDescription, useCompactPivots, useLargeTitle,
             teams, teamIterations, iterationWorkItems, taskboardColumns, workItems, workItemTypes
         } = this.state;
+
+        const interestedWorkItemTypes = ['Epic', 'Feature', 'User Story', 'Task', 'Bug'];
 
         const theTeams = teams.map((team, index) => {
             return (
@@ -115,15 +119,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             }
         }
 
-        const theIterationWorkItems = iterationWorkItems?.workItemRelations.map((workItemRelation, index) => {
-            return (
-                <li key={workItemRelation.target.id}>
-                    {workItemRelation.target.id} : {workItemRelation.source?.id}
-                </li>
-            );
-        });
-
-        const theTaskboardColumns = taskboardColumns?.columns.map((taskboardColumn, index) => {
+        const theTaskboardColumns = taskboardColumns?.columns.map(taskboardColumn => {
             return (
                 <li key={taskboardColumn.id}>
                     {taskboardColumn.name}
@@ -131,15 +127,79 @@ class HubContent extends React.Component<{}, IHubContentState> {
             );
         });
 
-        const theWorkItems = workItems.map((workItem, index) => {
+        /**
+         * Returns all work items (user stories, tasks, bugs) as a custom object for later display.
+         */
+        const organizedWorkItems = workItems.map(workItem => {
+            const newWorkItem = {
+                id: workItem.id,
+                title: workItem.fields['System.Title'],
+                assignedTo: workItem.fields['System.AssignedTo'] ? workItem.fields['System.AssignedTo'].displayName : 'unassigned',
+                workItemUrl: workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/'),
+                boardColumn: workItem.fields['System.BoardColumn'],
+                state: workItem.fields['System.State'],
+                type: workItem.fields['System.WorkItemType']
+            };
+
+            const taskboardColumn = this.state.taskboardWorkItemColumns.find(wic => wic.workItemId === workItem.id);
+            if (taskboardColumn) {
+                newWorkItem.boardColumn = taskboardColumn.column;
+            }
+
+            return newWorkItem;
+        });
+
+        const sortedWorkItems = interestedWorkItemTypes.map(workItemType => {
+            const typeMatchingWorkItems = organizedWorkItems.filter(wi => wi.type === workItemType);
+
+            if (typeMatchingWorkItems.length === 0) {
+                return;
+            }
+
+            //let sortedColumnWorkItems: [];
+            /*if (this.state.taskboardColumns) {
+                const sortedColumnWorkItems = this.state.taskboardColumns?.columns.map(taskboardColumn => {
+                    const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => {
+                        const workItem = this.state.taskboardWorkItemColumns.find(c => c.workItemId === wi.id && c.column === taskboardColumn.name);
+                        if (workItem) {
+                            return (
+
+                            )
+                        }
+                    });
+
+                });
+            }*/
+
+            /*const sortedColumnWorkItems = this.state.taskboardWorkItemColumns.map(workItemColumn => {
+                const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => {
+                    const workItem = this.state.taskboardWorkItemColumns.find(c => c.workItemId === wi.id && c.column === workItemColumn.);
+                    if (workItem) {
+
+                    }
+                });
+            })*/
+
+            console.log(workItemType);
+            console.log(typeMatchingWorkItems);
+
+            return (
+                <React.Fragment>
+                    <h2>{workItemType}</h2>
+                </React.Fragment>
+            );
+        });
+
+        const theWorkItems = workItems.map(workItem => {
             const workItemUrl = workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/');
             const assignedTo = workItem.fields['System.AssignedTo'] ? workItem.fields['System.AssignedTo'].displayName : 'unassigned';
-
-            //console.log(workItemUrl);
 
             return (
                 <li key={workItem.id}>
                     <a href={workItemUrl}>{workItem.id}</a> : {workItem.fields['System.Title']} ({assignedTo})
+                    <br />{workItem.fields['System.BoardColumn']}
+                    <br />{workItem.fields['System.State']}
+                    <br />{workItem.fields['System.WorkItemType']}
                 </li>
             );
         });
@@ -180,9 +240,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     onSelect={this.handleSelectTeamIteration}
                 />
 
-                <ul>{theIterationWorkItems}</ul>
-
                 <ul>{theTaskboardColumns}</ul>
+
+                {sortedWorkItems}
 
                 <ol>{theWorkItems}</ol>
 
@@ -274,8 +334,14 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         const workClient = getClient(WorkRestClient);
         this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, this.state.selectedTeamIteration);
-        console.log('need this list of item relations');
-        console.log(this.iterationWorkItems); // 10 (stories + tasks + bugs)
+
+        if (!this.iterationWorkItems) {
+            this.showToast('No work items found for this iteration.');
+            return;
+        }
+
+        // This will give us not only tasks and bugs, but also the user stories.
+        // We'll use this full list to get all the work items later.
         this.setState({ iterationWorkItems: this.iterationWorkItems });
 
         this.taskboardColumns = await workClient.getColumns(teamContext);
@@ -285,9 +351,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
         console.log(workItemColumns); // 6 (does not include user stories)
+        this.setState({ taskboardWorkItemColumns: workItemColumns });
 
         const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
-        console.log(teamIteration);
+        //console.log(teamIteration);
 
         const witClient = getClient(WorkItemTrackingRestClient);
         // TODO handle more than 200 work items
@@ -297,8 +364,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({ workItems: this.workItems });
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
-        // will probably just hard-code these
-        console.log(this.workItemTypes);
         this.setState({ workItemTypes: this.workItemTypes });
     }
 
