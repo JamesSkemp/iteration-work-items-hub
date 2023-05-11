@@ -115,14 +115,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
             }
         }
 
-        const theTeamIterations = teamIterations.map((teamIteration, index) => {
-            return (
-                <li key={teamIteration.id}>
-                    {teamIteration.name}
-                </li>
-            );
-        });
-
         const theIterationWorkItems = iterationWorkItems?.workItemRelations.map((workItemRelation, index) => {
             return (
                 <li key={workItemRelation.target.id}>
@@ -131,7 +123,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             );
         });
 
-        const theTaskBoardColumns = taskboardColumns?.columns.map((taskboardColumn, index) => {
+        const theTaskboardColumns = taskboardColumns?.columns.map((taskboardColumn, index) => {
             return (
                 <li key={taskboardColumn.id}>
                     {taskboardColumn.name}
@@ -140,9 +132,14 @@ class HubContent extends React.Component<{}, IHubContentState> {
         });
 
         const theWorkItems = workItems.map((workItem, index) => {
+            const workItemUrl = workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/');
+            const assignedTo = workItem.fields['System.AssignedTo'] ? workItem.fields['System.AssignedTo'].displayName : 'unassigned';
+
+            //console.log(workItemUrl);
+
             return (
                 <li key={workItem.id}>
-                    {workItem.fields['System.Title']}
+                    <a href={workItemUrl}>{workItem.id}</a> : {workItem.fields['System.Title']} ({assignedTo})
                 </li>
             );
         });
@@ -182,6 +179,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     selection={this.teamIterationSelection}
                     onSelect={this.handleSelectTeamIteration}
                 />
+
+                <ul>{theIterationWorkItems}</ul>
+
+                <ul>{theTaskboardColumns}</ul>
 
                 <ol>{theWorkItems}</ol>
 
