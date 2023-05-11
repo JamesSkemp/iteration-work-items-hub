@@ -32,7 +32,9 @@ interface IHubContentState {
     teams: WebApiTeam[];
     teamIterations: TeamSettingsIteration[];
     selectedTeam: string;
+    selectedTeamName: string;
     selectedTeamIteration: string;
+    selectedTeamIterationName: string;
     iterationWorkItems?: IterationWorkItems;
     taskboardWorkItemColumns: TaskboardWorkItemColumn[];
     /**
@@ -67,7 +69,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
             teams: [],
             teamIterations: [],
             selectedTeam: '',
+            selectedTeamName: '',
             selectedTeamIteration: '',
+            selectedTeamIterationName: '',
             taskboardWorkItemColumns: [],
             workItems: [],
             workItemTypes: []
@@ -136,24 +140,37 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 return;
             }
 
-            const workItems = typeMatchingWorkItems.map(workItem => {
-                return (
-                    <li key={workItem.id}>
-                        <a href={workItem.url}>{workItem.id}</a> : {workItem.title} ({workItem.assignedTo})
-                        <br />{workItem.boardColumn}
-                        <br />{workItem.state}
-                        <br />{workItem.type}
-                    </li>
-                );
-            });
+            const taskboardColumns = this.state.taskboardColumns ? this.state.taskboardColumns.columns : [];
 
-            console.log(workItemType);
-            console.log(typeMatchingWorkItems);
+            const workItemStates = taskboardColumns.map(column => {
+                const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => wi.boardColumn === column.name);
+
+                if (columnMatchingWorkItems.length === 0) {
+                    return;
+                }
+
+                const workItems = columnMatchingWorkItems.map(workItem => {
+                    return (
+                        <li key={workItem.id}>
+                            <a href={workItem.url}>{workItem.id}</a> : {workItem.title} - {workItem.assignedTo}
+                        </li>
+                    );
+                });
+
+                return (
+                    <React.Fragment>
+                        <h4>{column.name}</h4>
+                        <ul>{workItems}</ul>
+                    </React.Fragment>
+                )
+            })
 
             return (
                 <React.Fragment>
-                    <h2>{workItemType}</h2>
-                    <ul>{workItems}</ul>
+                    <h3>{workItemType}</h3>
+                    <React.Fragment>
+                        {workItemStates}
+                    </React.Fragment>
                 </React.Fragment>
             );
         });
@@ -185,6 +202,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     selection={this.teamIterationSelection}
                     onSelect={this.handleSelectTeamIteration}
                 />
+
+                <h3>Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h3>
 
                 {sortedWorkItems}
 
@@ -232,6 +251,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
             this.setState({
                 selectedTeam: this.teams[0].id
             });
+            this.setState({
+                selectedTeamName: this.teams[0].name
+            })
             this.getTeamData();
         }
 
@@ -241,7 +263,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         await SDK.ready();
         const teamContext = { projectId: this.state.project, teamId: this.state.selectedTeam, project: "", team: "" };
 
-        // Get taskboard columns.
+        // Get team iterations.
         const workClient = getClient(WorkRestClient);
         this.teamIterations = await workClient.getTeamIterations(teamContext);
         if (!this.teamIterations) {
@@ -251,12 +273,15 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({ teamIterations: this.teamIterations });
 
         let iterationId = "";
+        let iterationName = "";
         if (this.teamIterations.length === 1) {
             iterationId = this.teamIterations[0].id;
+            iterationName = this.teamIterations[0].name;
         } else {
             let currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
             if (currentIteration) {
                 iterationId = currentIteration.id;
+                iterationName = currentIteration.name;
             }
         }
 
@@ -264,6 +289,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
             this.setState({
                 selectedTeamIteration: iterationId
             });
+            this.setState({
+                selectedTeamIterationName: iterationName
+            })
             this.getTeamIterationData();
         }
     }
@@ -275,8 +303,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const workClient = getClient(WorkRestClient);
         this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, this.state.selectedTeamIteration);
 
-        if (!this.iterationWorkItems) {
+        if (!this.iterationWorkItems || this.iterationWorkItems.workItemRelations.length === 0) {
             this.showToast('No work items found for this iteration.');
+            this.setState({ workItems: [] });
             return;
         }
 
@@ -284,13 +313,20 @@ class HubContent extends React.Component<{}, IHubContentState> {
         // We'll use this full list to get all the work items later.
         this.setState({ iterationWorkItems: this.iterationWorkItems });
 
+        // Get taskboard columns.
         this.taskboardColumns = await workClient.getColumns(teamContext);
-        console.log('need this list of columns');
-        console.log(this.taskboardColumns); // 5 - need this
+
+        // TODO this can throw an error - how do we handle this better? where are the defaults?
+        if (!this.taskboardColumns || this.taskboardColumns.columns.length === 0) {
+            this.showToast('No taskboard columns can be found for this team. This extension requires taskboard columns to be defined.');
+            return;
+        }
+        //console.log('need this list of columns');
+        //console.log(this.taskboardColumns); // 5 - need this
         this.setState({ taskboardColumns: this.taskboardColumns });
 
         const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
-        console.log(workItemColumns); // 6 (does not include user stories)
+        //console.log(workItemColumns); // 6 (does not include user stories)
         this.setState({ taskboardWorkItemColumns: workItemColumns });
 
         const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
@@ -299,8 +335,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const witClient = getClient(WorkItemTrackingRestClient);
         // TODO handle more than 200 work items
         this.workItems = await witClient.getWorkItems(this.iterationWorkItems.workItemRelations.map(wi => wi.target.id));
-        console.log('need this list of work items');
-        console.log(this.workItems);
+        //console.log('need this list of work items');
+        //console.log(this.workItems);
         this.setState({ workItems: this.workItems });
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
@@ -318,7 +354,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTeam: item.id
         });
         this.setState({
+            selectedTeamName: item.text ?? ''
+        });
+        this.setState({
             selectedTeamIteration: ''
+        });
+        this.setState({
+            selectedTeamIterationName: ''
         });
         this.getTeamData();
     }
@@ -326,6 +368,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
     private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
         this.setState({
             selectedTeamIteration: item.id
+        });
+        this.setState({
+            selectedTeamIterationName: item.text ?? ''
         });
         this.getTeamIterationData();
     }
