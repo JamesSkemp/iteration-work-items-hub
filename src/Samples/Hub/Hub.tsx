@@ -21,7 +21,7 @@ import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observabl
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
 import { IterationWorkItems, TaskboardColumns, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
-import { CoreRestClient, WebApiTeam } from "azure-devops-extension-api/Core";
+import { CoreRestClient, ProjectInfo, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
 import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
@@ -32,6 +32,7 @@ interface IHubContentState {
     useLargeTitle?: boolean;
     useCompactPivots?: boolean;
 
+    project: string;
     teams: WebApiTeam[];
     teamIterations: TeamSettingsIteration[];
     selectedTeam: string;
@@ -64,6 +65,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         super(props);
 
         this.state = {
+            project: '',
             selectedTabId: "overview",
             teams: [],
             teamIterations: [],
@@ -212,10 +214,11 @@ class HubContent extends React.Component<{}, IHubContentState> {
             this.showToast('No projects found.');
             return;
         }
+        this.setState({ project: this.project.id });
 
         // Get teams.
         const coreClient = getClient(CoreRestClient);
-        this.teams = await coreClient.getTeams(this.project.id);
+        this.teams = await coreClient.getTeams(this.state.project);
         if (!this.teams) {
             this.showToast('No teams found.');
             return;
@@ -228,12 +231,15 @@ class HubContent extends React.Component<{}, IHubContentState> {
             this.setState({
                 selectedTeam: this.teams[0].id
             });
-        } else {
-            //teamId = "1e538049-e108-44be-9480-74fbfc79500f";
-            teamId = "a9cf85f0-07c4-4a9a-9442-703b164496c6";
+            this.getTeamData();
         }
 
-        const teamContext = { projectId: this.project.id, teamId: teamId, project: "", team: "" };
+    }
+
+    private async getTeamData() {
+        await SDK.ready();
+
+        const teamContext = { projectId: this.state.project, teamId: this.state.selectedTeam, project: "", team: "" };
 
         // Get taskboard columns.
         const workClient = getClient(WorkRestClient);
@@ -277,7 +283,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         console.log(this.workItems);
         this.setState({ workItems: this.workItems });
 
-        this.workItemTypes = await witClient.getWorkItemTypes(this.project.id);
+        this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
         // will probably just hard-code these
         console.log(this.workItemTypes);
         this.setState({ workItemTypes: this.workItemTypes });
@@ -297,6 +303,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({
             selectedTeamIteration: ''
         });
+        this.getTeamData();
     }
 
     private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {

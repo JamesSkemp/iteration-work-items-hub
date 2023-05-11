@@ -1,1 +1,1 @@
-Sample Azure DevOps extension
+Iteration Work Items Hub
