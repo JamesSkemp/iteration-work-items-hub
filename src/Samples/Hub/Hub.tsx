@@ -3,22 +3,19 @@ import "./Hub.scss";
 
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { CommonServiceIds, IGlobalMessagesService, IHostPageLayoutService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
+import { CommonServiceIds, IGlobalMessagesService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
 
 import { Header, TitleSize } from "azure-devops-ui/Header";
-import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
 
-import { OverviewTab } from "./OverviewTab";
 import { NavigationTab } from "./NavigationTab";
 import { ExtensionDataTab } from "./ExtensionDataTab";
-import { MessagesTab } from "./MessagesTab";
 import { showRootComponent } from "../../Common";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
 import { IterationWorkItems, TaskboardColumn, TaskboardColumns, TaskboardWorkItemColumn, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
-import { CoreRestClient, ProjectInfo, WebApiTeam } from "azure-devops-extension-api/Core";
+import { CoreRestClient, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
 
@@ -65,7 +62,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         this.state = {
             project: '',
-            selectedTabId: "overview",
+            selectedTabId: "navigation",
             teams: [],
             teamIterations: [],
             selectedTeam: '',
@@ -180,9 +177,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             <Page className="sample-hub flex-grow">
 
                 <Header title="Iteration Work Items Hub"
-                    commandBarItems={this.getCommandBarItems()}
                     description={headerDescription}
-                    titleSize={useLargeTitle ? TitleSize.Large : TitleSize.Medium} />
+                    titleSize={TitleSize.Large} />
 
                 <h2>Select a Team</h2>
                 <Dropdown
@@ -215,10 +211,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     selectedTabId={selectedTabId}
                     tabSize={useCompactPivots ? TabSize.Compact : TabSize.Tall}>
 
-                    <Tab name="Overview" id="overview" />
                     <Tab name="Navigation" id="navigation" />
                     <Tab name="Extension Data" id="extensionData" />
-                    <Tab name="Messages" id="messages" />
                 </TabBar>
 
                 { this.getPageContent() }
@@ -259,7 +253,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
             })
             this.getTeamData();
         }
-
     }
 
     private async getTeamData() {
@@ -322,10 +315,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         } catch (ex) {
             this.taskboardColumns = undefined;
         }
-        //console.log(this.taskboardColumns);
 
-        //console.log('need this list of columns');
-        //console.log(this.taskboardColumns); // 5 - need this
         if (!this.taskboardColumns || this.taskboardColumns.columns.length === 0) {
             this.showToast('No taskboard columns can be found for this team. Default columns will be used.');
             this.setState({ taskboardColumns: [
@@ -353,8 +343,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const witClient = getClient(WorkItemTrackingRestClient);
         // TODO handle more than 200 work items
         this.workItems = await witClient.getWorkItems(this.iterationWorkItems.workItemRelations.map(wi => wi.target.id));
-        //console.log('need this list of work items');
-        //console.log(this.workItems);
         this.setState({ workItems: this.workItems });
 
         if (manuallyGenerateTaskboardWorkItemColumns) {
@@ -365,8 +353,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 columnId: wi.fields['System.State']
             }));
             this.setState({ taskboardWorkItemColumns: manualWorkItemColumns });
-            // TODO
-            // {workItemId: 102, state: 'Closed', column: 'Closed', columnId: 'f60021ec-f65c-4b86-90e8-81db06250b14'}
         }
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
@@ -407,95 +393,12 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private getPageContent() {
         const { selectedTabId } = this.state;
-        if (selectedTabId === "overview") {
-            return <OverviewTab />;
-        }
-        else if (selectedTabId === "navigation") {
+        if (selectedTabId === "navigation") {
             return <NavigationTab />;
         }
         else if (selectedTabId === "extensionData") {
             return <ExtensionDataTab />;
         }
-        else if (selectedTabId === "messages") {
-            return <MessagesTab />;
-        }
-    }
-
-    private getCommandBarItems(): IHeaderCommandBarItem[] {
-        return [
-            {
-              id: "panel",
-              text: "Panel",
-              onActivate: () => { this.onPanelClick() },
-              iconProps: {
-                iconName: 'Add'
-              },
-              isPrimary: true,
-              tooltipProps: {
-                text: "Open a panel with custom extension content"
-              }
-            },
-            {
-              id: "messageDialog",
-              text: "Message",
-              onActivate: () => { this.onMessagePromptClick() },
-              tooltipProps: {
-                text: "Open a simple message dialog"
-              }
-            },
-            {
-              id: "customDialog",
-              text: "Custom Dialog",
-              onActivate: () => { this.onCustomPromptClick() },
-              tooltipProps: {
-                text: "Open a dialog with custom extension content"
-              }
-            }
-        ];
-    }
-
-    private async onMessagePromptClick(): Promise<void> {
-        const dialogService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-        dialogService.openMessageDialog("Use large title?", {
-            showCancel: true,
-            title: "Message dialog",
-            onClose: (result) => {
-                this.setState({ useLargeTitle: result });
-            }
-        });
-    }
-
-    private async onCustomPromptClick(): Promise<void> {
-        const dialogService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-        dialogService.openCustomDialog<boolean | undefined>(SDK.getExtensionContext().id + ".panel-content", {
-            title: "Custom dialog",
-            configuration: {
-                message: "Use compact pivots?",
-                initialValue: this.state.useCompactPivots
-            },
-            onClose: (result) => {
-                if (result !== undefined) {
-                    this.setState({ useCompactPivots: result });
-                }
-            }
-        });
-    }
-
-    private async onPanelClick(): Promise<void> {
-        const panelService = await SDK.getService<IHostPageLayoutService>(CommonServiceIds.HostPageLayoutService);
-        panelService.openPanel<boolean | undefined>(SDK.getExtensionContext().id + ".panel-content", {
-            title: "My Panel",
-            description: "Description of my panel",
-            configuration: {
-                message: "Show header description?",
-                initialValue: !!this.state.headerDescription
-            },
-            onClose: (result) => {
-                if (result !== undefined) {
-                    this.setState({ headerDescription: result ? "This is a header description" : undefined });
-                }
-            }
-        });
     }
 
     private showToast = async (message: string): Promise<void> => {

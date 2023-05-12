@@ -2,15 +2,11 @@
     "manifestVersion": 1,
     "id": "iteration-work-items-hub",
     "publisher": "JamesSkemp",
-    "version": "1.0.80",
+    "version": "1.0.83",
     "name": "Iteration Work Items Hub",
     "description": "Azure DevOps Extension",
     "categories": [
-        "Azure Repos",
-        "Azure Boards",
-        "Azure Pipelines",
-        "Azure Test Plans",
-        "Azure Artifacts"
+        "Azure Boards"
     ],
     "targets": [
         {
