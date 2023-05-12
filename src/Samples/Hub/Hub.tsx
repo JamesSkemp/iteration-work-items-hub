@@ -17,7 +17,7 @@ import { MessagesTab } from "./MessagesTab";
 import { showRootComponent } from "../../Common";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
-import { IterationWorkItems, TaskboardColumns, TaskboardWorkItemColumn, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
+import { IterationWorkItems, TaskboardColumn, TaskboardColumns, TaskboardWorkItemColumn, TeamSettingsIteration, WorkRestClient } from "azure-devops-extension-api/Work";
 import { CoreRestClient, ProjectInfo, WebApiTeam } from "azure-devops-extension-api/Core";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { ListSelection } from "azure-devops-ui/List";
@@ -40,7 +40,7 @@ interface IHubContentState {
     /**
      * All columns used in project team taskboards.
      */
-    taskboardColumns?: TaskboardColumns;
+    taskboardColumns: TaskboardColumn[];
     workItems: WorkItem[];
     /**
      * All work item types, such as Feature, Epic, Bug, Task, User Story.
@@ -73,6 +73,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTeamIteration: '',
             selectedTeamIterationName: '',
             taskboardWorkItemColumns: [],
+            taskboardColumns: [],
             workItems: [],
             workItemTypes: []
         };
@@ -140,7 +141,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 return;
             }
 
-            const taskboardColumns = this.state.taskboardColumns ? this.state.taskboardColumns.columns : [];
+            const taskboardColumns = this.state.taskboardColumns;
 
             const workItemStates = taskboardColumns.map(column => {
                 const columnMatchingWorkItems = typeMatchingWorkItems.filter(wi => wi.boardColumn === column.name);
@@ -316,20 +317,35 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({ iterationWorkItems: this.iterationWorkItems });
 
         // Get taskboard columns.
-        this.taskboardColumns = await workClient.getColumns(teamContext);
-
-        // TODO this can throw an error - how do we handle this better? where are the defaults?
-        if (!this.taskboardColumns || this.taskboardColumns.columns.length === 0) {
-            this.showToast('No taskboard columns can be found for this team. This extension requires taskboard columns to be defined.');
-            return;
+        try {
+            this.taskboardColumns = await workClient.getColumns(teamContext);
+        } catch (ex) {
+            this.taskboardColumns = undefined;
         }
+        //console.log(this.taskboardColumns);
+
         //console.log('need this list of columns');
         //console.log(this.taskboardColumns); // 5 - need this
-        this.setState({ taskboardColumns: this.taskboardColumns });
+        if (!this.taskboardColumns || this.taskboardColumns.columns.length === 0) {
+            this.showToast('No taskboard columns can be found for this team. Default columns will be used.');
+            this.setState({ taskboardColumns: [
+                { id: 'New', name: 'New', order: 0, mappings: [] },
+                { id: 'Active', name: 'Active', order: 1, mappings: [] },
+                { id: 'Resolved', name: 'Resolved', order: 2, mappings: [] },
+                { id: 'Closed', name: 'Closed', order: 3, mappings: [] },
+            ]});
+        } else {
+            this.setState({ taskboardColumns: this.taskboardColumns.columns });
+        }
 
-        const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
-        //console.log(workItemColumns); // 6 (does not include user stories)
-        this.setState({ taskboardWorkItemColumns: workItemColumns });
+        let manuallyGenerateTaskboardWorkItemColumns = false;
+        try {
+            const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
+            this.setState({ taskboardWorkItemColumns: workItemColumns });
+        } catch (ex) {
+            this.showToast('Unable to get work item columns for this team. These will be generated ');
+            manuallyGenerateTaskboardWorkItemColumns = true;
+        }
 
         //const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
         //console.log(teamIteration);
@@ -340,6 +356,18 @@ class HubContent extends React.Component<{}, IHubContentState> {
         //console.log('need this list of work items');
         //console.log(this.workItems);
         this.setState({ workItems: this.workItems });
+
+        if (manuallyGenerateTaskboardWorkItemColumns) {
+            const manualWorkItemColumns = this.workItems.filter(wi => wi.fields['System.WorkItemType'] === 'Task').map<TaskboardWorkItemColumn>(wi => ({
+                workItemId: wi.id,
+                state: wi.fields['System.State'],
+                column: wi.fields['System.State'],
+                columnId: wi.fields['System.State']
+            }));
+            this.setState({ taskboardWorkItemColumns: manualWorkItemColumns });
+            // TODO
+            // {workItemId: 102, state: 'Closed', column: 'Closed', columnId: 'f60021ec-f65c-4b86-90e8-81db06250b14'}
+        }
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
         this.setState({ workItemTypes: this.workItemTypes });
