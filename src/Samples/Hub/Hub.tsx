@@ -191,6 +191,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     items={teamDropdownItems()}
                     selection={this.teamSelection}
                     onSelect={this.handleSelectTeam}
+                    dismissOnSelect={true}
                 />
 
                 <h2>Select an Iteration</h2>
@@ -201,6 +202,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     items={teamIterationDropdownItems()}
                     selection={this.teamIterationSelection}
                     onSelect={this.handleSelectTeamIteration}
+                    dismissOnSelect={true}
                 />
 
                 <h3>Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h3>
@@ -329,7 +331,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         //console.log(workItemColumns); // 6 (does not include user stories)
         this.setState({ taskboardWorkItemColumns: workItemColumns });
 
-        const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
+        //const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
         //console.log(teamIteration);
 
         const witClient = getClient(WorkItemTrackingRestClient);
