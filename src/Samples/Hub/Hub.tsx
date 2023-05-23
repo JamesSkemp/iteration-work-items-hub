@@ -3,7 +3,7 @@ import "./Hub.scss";
 
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { CommonServiceIds, IGlobalMessagesService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
+import { CommonServiceIds, IGlobalMessagesService, IHostNavigationService, IProjectInfo, IProjectPageService, getClient } from "azure-devops-extension-api";
 
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { Page } from "azure-devops-ui/Page";
@@ -156,31 +156,31 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 });
 
                 return (
-                    <React.Fragment>
-                        <h4>{column.name}</h4>
+                    <div className="work-item-state">
+                        <h3>{column.name}</h3>
                         <ul>{workItems}</ul>
-                    </React.Fragment>
+                    </div>
                 )
             })
 
             return (
-                <React.Fragment>
-                    <h3>{workItemType}</h3>
+                <div className="work-item-type">
+                    <h2>{workItemType}</h2>
                     <React.Fragment>
                         {workItemStates}
                     </React.Fragment>
-                </React.Fragment>
+                </div>
             );
         });
 
         return (
-            <Page className="sample-hub flex-grow">
+            <Page className="iteration-work-items-hub flex-grow">
 
                 <Header title="Iteration Work Items Hub"
                     description={headerDescription}
                     titleSize={TitleSize.Large} />
 
-                <h2>Select a Team</h2>
+                <p>Select a Team</p>
                 <Dropdown
                     ariaLabel="Select a team"
                     className="example-dropdown"
@@ -191,7 +191,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     dismissOnSelect={true}
                 />
 
-                <h2>Select an Iteration</h2>
+                <p>Select an Iteration</p>
                 <Dropdown
                     ariaLabel="Select a team iteration"
                     className="example-dropdown"
@@ -202,7 +202,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     dismissOnSelect={true}
                 />
 
-                <h3>Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h3>
+                <h2>Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>
 
                 {sortedWorkItems}
 
@@ -382,6 +382,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTeamIterationName: ''
         });
         this.getTeamData();
+        this.updateQueryParams();
     }
 
     private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
@@ -392,6 +393,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTeamIterationName: item.text ?? ''
         });
         this.getTeamIterationData();
+        this.updateQueryParams();
     }
 
     private getPageContent() {
@@ -410,6 +412,12 @@ class HubContent extends React.Component<{}, IHubContentState> {
             duration: 3000,
             message: message
         });
+    }
+
+    private updateQueryParams = async () => {
+        const navService = await SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService);
+        navService.setQueryParams({ selectedTeam: "" + this.state.selectedTeam, selectedTeamIteration: this.state.selectedTeamIteration });
+        navService.setDocumentTitle("" + this.state.selectedTeamName + " : " + this.state.selectedTeamIterationName + " - Iteration Work Items");
     }
 }
 
