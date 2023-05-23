@@ -242,9 +242,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
         }
         this.setState({ teams: this.teams });
 
-        let teamId = "";
         if (this.teams.length === 1) {
-            teamId = this.teams[0].id;
+            this.teamSelection.select(0);
             this.setState({
                 selectedTeam: this.teams[0].id
             });
@@ -271,11 +270,15 @@ class HubContent extends React.Component<{}, IHubContentState> {
         let iterationId = "";
         let iterationName = "";
         if (this.teamIterations.length === 1) {
+            this.teamIterationSelection.select(0);
+
             iterationId = this.teamIterations[0].id;
             iterationName = this.teamIterations[0].name;
         } else {
             let currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
             if (currentIteration) {
+                this.teamIterationSelection.select(this.teamIterations.indexOf(currentIteration));
+
                 iterationId = currentIteration.id;
                 iterationName = currentIteration.name;
             }
