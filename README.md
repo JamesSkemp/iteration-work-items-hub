@@ -1,8 +1,23 @@
-# Azure DevOps Web Sample Extension
+# Iteration Work Items Hub
+
+## Install
+Install from Visual Studio Marketplace: https://marketplace.visualstudio.com/items?itemName=JamesSkemp.iteration-work-items-hub
+
+## Build
+`npm run build` automatically increments the version and creates a new *.vsix file in the root directory.
+
+Publish to https://marketplace.visualstudio.com/manage/publishers
+
+## Development
+Based upon the [Azure DevOps Web Sample Extension](https://github.com/microsoft/azure-devops-extension-sample).
+
+Original README contents are below.
+
+### Azure DevOps Web Sample Extension
 
 This repository generates an [Azure DevOps extension](https://docs.microsoft.com/en-us/azure/devops/extend/overview?view=vsts) containing a number of different contributions of various types.
 
-## Dependencies
+#### Dependencies
 
 The sample repository depends on a few Azure DevOps packages:
 
@@ -17,7 +32,7 @@ Some external dependencies:
 - `SASS` - Extension samples are styled using SASS (which is compiled to CSS and delivered in webpack js bundles).
 - `webpack` - Is used to gather dependencies into a single javascript bundle for each sample.
 
-## Building the sample project
+#### Building the sample project
 
 Just run:
 
@@ -25,7 +40,7 @@ Just run:
 
 This produces a .vsix file which can be uploaded to the [Visual Studio Marketplace](https://marketplace.visualstudio.com/azuredevops)
 
-## Using the extension
+#### Using the extension
 
 The preferred way to get started is to use the `tfx extension init` command which will clone from this sample and prompt you for replacement information (like your publisher id). Just run:
 
@@ -34,7 +49,7 @@ The preferred way to get started is to use the `tfx extension init` command whic
 
 You can also clone the sample project and change the `publisher` property in `azure-devops-extension.json` to your own Marketplace publisher id. Refer to the online [documentation](https://docs.microsoft.com/en-us/azure/devops/extend/publish/overview?view=vsts) for setting up your own publisher and publishing an extension.
 
-# Samples
+### Samples
 
 Individual sample contributions are self-contained folders under `./src/Samples`. Within each sample you will find:
 
@@ -44,7 +59,7 @@ Individual sample contributions are self-contained folders under `./src/Samples`
 4. `{SampleName}.scss` - optional sass file containing the styles (CSS) for the UI
 5. Additional ts/tsx files - For samples that are too big for one file, the code will be broken up appropriately
 
-## Hub
+#### Hub
 
 This sample adds a hub named "Sample Hub" into the `Pipelines` hub group. If you visit a project-level page, you will find Sample Hub under the `Pipelines` navigation element in the vertical navigation menu on the left of the page.
 
@@ -57,12 +72,12 @@ The hub uses a Pivot component to draw 4 different tabs:
 
 There are also actions at the top-right of the hub which demonstrate opening dialogs and panels, including custom content within them (used in the `Panel` sample).
 
-## QueryParamsHandler
+#### QueryParamsHandler
 
 This sample adds a service that gets loaded on any page whenever a "showMyPanel" query parameter is present
 in the URL when any page is loaded. The startup service shows the custom panel from the Panel sample, using
 an optional "myPanelTitle" query parameter as the panel title.
 
-# References
+### References
 
 The full set of documentation for developing extensions can be found at [https://docs.microsoft.com/en-us/azure/devops/extend](https://docs.microsoft.com/en-us/azure/devops/extend/?view=vsts).
