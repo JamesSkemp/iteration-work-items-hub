@@ -9,7 +9,6 @@ import { Header, TitleSize } from "azure-devops-ui/Header";
 import { Page } from "azure-devops-ui/Page";
 import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
 
-import { NavigationTab } from "./NavigationTab";
 import { ExtensionDataTab } from "./ExtensionDataTab";
 import { showRootComponent } from "../../Common";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
@@ -431,10 +430,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private getPageContent() {
         const { selectedTabId } = this.state;
-        if (selectedTabId === "navigation") {
-            return <NavigationTab />;
-        }
-        else if (selectedTabId === "extensionData") {
+        if (selectedTabId === "extensionData") {
             return <ExtensionDataTab />;
         }
     }
