@@ -57,6 +57,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
     private teamSelection = new ListSelection();
     private teamIterationSelection = new ListSelection();
 
+    private queryParamsTeam: string = '';
+    private queryParamsTeamIteration: string = '';
+
     constructor(props: {}) {
         super(props);
 
@@ -242,6 +245,15 @@ class HubContent extends React.Component<{}, IHubContentState> {
         }
         this.setState({ teams: this.teams });
 
+        // Check the URL for a stored team and iteration.
+        const queryParams = await this.getQueryParams();
+        if (queryParams.queryTeam) {
+            this.queryParamsTeam = queryParams.queryTeam;
+            if (queryParams.queryTeamIteration) {
+                this.queryParamsTeamIteration = queryParams.queryTeamIteration;
+            }
+        }
+
         if (this.teams.length === 1) {
             this.teamSelection.select(0);
             this.setState({
@@ -249,8 +261,22 @@ class HubContent extends React.Component<{}, IHubContentState> {
             });
             this.setState({
                 selectedTeamName: this.teams[0].name
-            })
+            });
             this.getTeamData();
+        } else if (this.queryParamsTeam) {
+            // See if the team selection from the URL is a valid team.
+            const queryTeamIndex = this.teams.findIndex(t => t.id == this.queryParamsTeam);
+            if (queryTeamIndex >= 0) {
+                // Select the team.
+                this.teamSelection.select(queryTeamIndex);
+                this.setState({
+                    selectedTeam: this.teams[queryTeamIndex].id
+                });
+                this.setState({
+                    selectedTeamName: this.teams[queryTeamIndex].name
+                });
+                this.getTeamData();
+            }
         }
     }
 
@@ -394,6 +420,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
         });
         this.getTeamIterationData();
         this.updateQueryParams();
+    }
+
+    private async getQueryParams() {
+        const navService = await SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService);
+        const hash = await navService.getQueryParams();
+
+        return { queryTeam: hash['selectedTeam'], queryTeamIteration: hash['selectedTeamIteration'] };
     }
 
     private getPageContent() {
