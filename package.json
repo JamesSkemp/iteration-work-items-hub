@@ -10,7 +10,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://git.ebacher-skemp.com/strivinglife/iteration-work-items-hub.git"
   },
   "scripts": {
     "clean": "rimraf ./dist",
