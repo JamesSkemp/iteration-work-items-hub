@@ -2,11 +2,18 @@
     "manifestVersion": 1,
     "id": "iteration-work-items-hub",
     "publisher": "JamesSkemp",
-    "version": "1.0.107",
+    "version": "1.0.111",
     "name": "Iteration Work Items Hub",
-    "description": "Azure DevOps Extension",
+    "description": "Iteration Work Items Hub supports viewing all items within a Team Iteration in Azure DevOps grouped by type and board state.",
     "categories": [
         "Azure Boards"
+    ],
+    "tags": [
+        "agile"
+    ],
+    "galleryFlags": [
+        "Public",
+        "Preview"
     ],
     "targets": [
         {
