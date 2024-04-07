@@ -15,7 +15,7 @@
             "properties": {
                 "name": "Iteration Work Items",
                 "uri": "dist/Hub/Hub.html",
-                "icon": "asset://static/sample-icon.png",
+                "icon": "asset://static/checklist.png",
                 "supportsMobile": true
             }
         }

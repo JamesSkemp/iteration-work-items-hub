@@ -182,42 +182,35 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     description={headerDescription}
                     titleSize={TitleSize.Large} />
 
-                <p>Select a Team</p>
-                <Dropdown
-                    ariaLabel="Select a team"
-                    className="example-dropdown"
-                    placeholder="Select a Team"
-                    items={teamDropdownItems()}
-                    selection={this.teamSelection}
-                    onSelect={this.handleSelectTeam}
-                    dismissOnSelect={true}
-                />
+                <div id="iteration-selections">
+                    <p>Select a Team</p>
+                    <Dropdown
+                        ariaLabel="Select a team"
+                        className="example-dropdown"
+                        placeholder="Select a Team"
+                        items={teamDropdownItems()}
+                        selection={this.teamSelection}
+                        onSelect={this.handleSelectTeam}
+                        dismissOnSelect={true}
+                    />
 
-                <p>Select an Iteration</p>
-                <Dropdown
-                    ariaLabel="Select a team iteration"
-                    className="example-dropdown"
-                    placeholder="Select a Team Iteration"
-                    items={teamIterationDropdownItems()}
-                    selection={this.teamIterationSelection}
-                    onSelect={this.handleSelectTeamIteration}
-                    dismissOnSelect={true}
-                />
+                    <p>Select an Iteration</p>
+                    <Dropdown
+                        ariaLabel="Select a team iteration"
+                        className="example-dropdown"
+                        placeholder="Select a Team Iteration"
+                        items={teamIterationDropdownItems()}
+                        selection={this.teamIterationSelection}
+                        onSelect={this.handleSelectTeamIteration}
+                        dismissOnSelect={true}
+                    />
+                </div>
 
-                <h2>Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>
+                <h2 id="selected-iteration">Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>
 
                 {sortedWorkItems}
 
-                <TabBar
-                    onSelectedTabChanged={this.onSelectedTabChanged}
-                    selectedTabId={selectedTabId}
-                    tabSize={useCompactPivots ? TabSize.Compact : TabSize.Tall}>
-
-                    <Tab name="Navigation" id="navigation" />
-                    <Tab name="Extension Data" id="extensionData" />
-                </TabBar>
-
-                { this.getPageContent() }
+                <ExtensionDataTab />
             </Page>
         );
     }
@@ -365,11 +358,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             manuallyGenerateTaskboardWorkItemColumns = true;
         }
 
-        //const teamIteration = await workClient.getTeamIteration(teamContext, this.state.selectedTeamIteration);
-        //console.log(teamIteration);
-
         const witClient = getClient(WorkItemTrackingRestClient);
-        // TODO handle more than 200 work items
+        // TODO handle more than 200 work items; this endpoint only accepts/returns up to 200
         this.workItems = await witClient.getWorkItems(this.iterationWorkItems.workItemRelations.map(wi => wi.target.id));
         this.setState({ workItems: this.workItems });
 
@@ -426,13 +416,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const hash = await navService.getQueryParams();
 
         return { queryTeam: hash['selectedTeam'], queryTeamIteration: hash['selectedTeamIteration'] };
-    }
-
-    private getPageContent() {
-        const { selectedTabId } = this.state;
-        if (selectedTabId === "extensionData") {
-            return <ExtensionDataTab />;
-        }
     }
 
     private showToast = async (message: string): Promise<void> => {

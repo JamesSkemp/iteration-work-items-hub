@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "iteration-work-items-hub",
     "publisher": "JamesSkemp",
-    "version": "1.0.97",
+    "version": "1.0.104",
     "name": "Iteration Work Items Hub",
     "description": "Azure DevOps Extension",
     "categories": [
@@ -20,6 +20,15 @@
         "details": {
             "path": "overview.md"
         }
+    },
+    "links": {
+        "learn": {
+            "uri": "https://git.ebacher-skemp.com/strivinglife/iteration-work-items-hub"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "uri": "https://git.ebacher-skemp.com/strivinglife/iteration-work-items-hub"
     },
     "files": [
         {

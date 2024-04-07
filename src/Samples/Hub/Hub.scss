@@ -3,4 +3,18 @@
 .iteration-work-items-hub {
     font-size: $fontSizeM;
     padding: 0 1em;
+
+    #iteration-selections {
+        p {
+            margin-bottom: 0;
+        }
+
+        .example-dropdown {
+            width: 50vw;
+        }
+    }
+
+    #selected-iteration {
+        margin-bottom: 0;
+    }
 }
