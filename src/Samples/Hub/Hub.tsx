@@ -350,7 +350,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
             this.setState({ taskboardWorkItemColumns: workItemColumns });
         } catch (ex) {
-            this.showToast('Unable to get work item columns for this team. These will be generated ');
+            this.showToast('No work item columns were found for this team. These will be generated automatically from the work items.');
             manuallyGenerateTaskboardWorkItemColumns = true;
         }
 
