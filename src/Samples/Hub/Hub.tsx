@@ -7,9 +7,7 @@ import { CommonServiceIds, IGlobalMessagesService, IHostNavigationService, IProj
 
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { Page } from "azure-devops-ui/Page";
-import { Tab, TabBar, TabSize } from "azure-devops-ui/Tabs";
 
-import { ExtensionDataTab } from "./ExtensionDataTab";
 import { showRootComponent } from "../../Common";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 import { WorkItem, WorkItemTrackingRestClient, WorkItemType } from "azure-devops-extension-api/WorkItemTracking";
@@ -209,8 +207,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 <h2 id="selected-iteration">Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>
 
                 {sortedWorkItems}
-
-                <ExtensionDataTab />
             </Page>
         );
     }
@@ -375,12 +371,6 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         this.workItemTypes = await witClient.getWorkItemTypes(this.state.project);
         this.setState({ workItemTypes: this.workItemTypes });
-    }
-
-    private onSelectedTabChanged = (newTabId: string) => {
-        this.setState({
-            selectedTabId: newTabId
-        })
     }
 
     private handleSelectTeam = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
