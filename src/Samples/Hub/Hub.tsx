@@ -83,7 +83,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     public render(): JSX.Element {
         const {
-            selectedTabId, headerDescription, useCompactPivots, useLargeTitle,
+            headerDescription, useLargeTitle,
             teams, teamIterations, workItems
         } = this.state;
 
@@ -289,7 +289,14 @@ class HubContent extends React.Component<{}, IHubContentState> {
             iterationId = this.teamIterations[0].id;
             iterationName = this.teamIterations[0].name;
         } else {
-            let currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
+            let currentIteration: TeamSettingsIteration | undefined;
+            if (this.queryParamsTeamIteration) {
+                currentIteration = this.teamIterations.find(i => i.id === this.queryParamsTeamIteration);
+            }
+            if (!currentIteration) {
+                currentIteration = this.teamIterations.find(i => i.attributes.timeFrame === 1);
+            }
+
             if (currentIteration) {
                 this.teamIterationSelection.select(this.teamIterations.indexOf(currentIteration));
 
@@ -373,7 +380,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.setState({ workItemTypes: this.workItemTypes });
     }
 
-    private handleSelectTeam = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
+    private handleSelectTeam = (_event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
         this.setState({
             selectedTeam: item.id
         });
@@ -390,7 +397,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         this.updateQueryParams();
     }
 
-    private handleSelectTeamIteration = (event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
+    private handleSelectTeamIteration = (_event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
         this.setState({
             selectedTeamIteration: item.id
         });
