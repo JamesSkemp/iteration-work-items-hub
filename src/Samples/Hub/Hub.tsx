@@ -204,7 +204,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                     />
                 </div>
 
-                <h2 id="selected-iteration">Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>
+                {this.state.selectedTeamIterationName && <h2 id="selected-iteration">Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>}
 
                 {sortedWorkItems}
             </Page>
