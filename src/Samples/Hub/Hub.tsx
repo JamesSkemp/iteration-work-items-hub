@@ -27,7 +27,8 @@ interface IHubContentState {
     teamIterations: TeamSettingsIteration[];
     selectedTeam: string;
     selectedTeamName: string;
-    selectedTeamIteration: string;
+    selectedTeamIteration: TeamSettingsIteration | undefined;
+    selectedTeamIterationId: string;
     selectedTeamIterationName: string;
     iterationWorkItems?: IterationWorkItems;
     taskboardWorkItemColumns: TaskboardWorkItemColumn[];
@@ -67,7 +68,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
             teamIterations: [],
             selectedTeam: '',
             selectedTeamName: '',
-            selectedTeamIteration: '',
+            selectedTeamIteration: undefined,
+            selectedTeamIterationId: '',
             selectedTeamIterationName: '',
             taskboardWorkItemColumns: [],
             taskboardColumns: [],
@@ -106,6 +108,16 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 }));
             } else {
                 return [];
+            }
+        }
+
+        function sprintDatesHeading(selectedTeamIteration: TeamSettingsIteration | undefined): JSX.Element | null {
+            if (selectedTeamIteration) {
+                return (
+                    <p className="iteration-dates">{selectedTeamIteration.attributes.startDate.toLocaleDateString(undefined, { timeZone: 'UTC' })} - {selectedTeamIteration.attributes.finishDate.toLocaleDateString(undefined, { timeZone: 'UTC' })}</p>
+                );
+            } else {
+                return null;
             }
         }
 
@@ -206,6 +218,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 </div>
 
                 {this.state.selectedTeamIterationName && <h2 id="selected-iteration">Work Items for {this.state.selectedTeamName} : {this.state.selectedTeamIterationName}</h2>}
+                {sprintDatesHeading(this.state.selectedTeamIteration)}
 
                 {sortedWorkItems}
             </Page>
@@ -282,11 +295,13 @@ class HubContent extends React.Component<{}, IHubContentState> {
         }
         this.setState({ teamIterations: this.teamIterations });
 
+        let iteration;
         let iterationId = "";
         let iterationName = "";
         if (this.teamIterations.length === 1) {
             this.teamIterationSelection.select(0);
 
+            iteration = this.teamIterations[0];
             iterationId = this.teamIterations[0].id;
             iterationName = this.teamIterations[0].name;
         } else {
@@ -301,6 +316,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
             if (currentIteration) {
                 this.teamIterationSelection.select(this.teamIterations.indexOf(currentIteration));
 
+                iteration = currentIteration;
                 iterationId = currentIteration.id;
                 iterationName = currentIteration.name;
             }
@@ -308,7 +324,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         if (iterationId !== '') {
             this.setState({
-                selectedTeamIteration: iterationId
+                selectedTeamIteration: iteration
+            });
+            this.setState({
+                selectedTeamIterationId: iterationId
             });
             this.setState({
                 selectedTeamIterationName: iterationName
@@ -322,7 +341,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const teamContext = { projectId: this.state.project, teamId: this.state.selectedTeam, project: "", team: "" };
 
         const workClient = getClient(WorkRestClient);
-        this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, this.state.selectedTeamIteration);
+        this.iterationWorkItems = await workClient.getIterationWorkItems(teamContext, this.state.selectedTeamIterationId);
 
         if (!this.iterationWorkItems || this.iterationWorkItems.workItemRelations.length === 0) {
             this.showToast('No work items found for this iteration.');
@@ -355,7 +374,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
         let manuallyGenerateTaskboardWorkItemColumns = false;
         try {
-            const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIteration);
+            const workItemColumns = await workClient.getWorkItemColumns(teamContext, this.state.selectedTeamIterationId);
             this.setState({ taskboardWorkItemColumns: workItemColumns });
         } catch (ex) {
             this.showToast('No work item columns were found for this team. These will be generated automatically from the work items.');
@@ -389,7 +408,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
             selectedTeamName: item.text ?? ''
         });
         this.setState({
-            selectedTeamIteration: ''
+            selectedTeamIteration: undefined
+        });
+        this.setState({
+            selectedTeamIterationId: ''
         });
         this.setState({
             selectedTeamIterationName: ''
@@ -400,7 +422,10 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private handleSelectTeamIteration = (_event: React.SyntheticEvent<HTMLElement>, item: IListBoxItem<{}>): void => {
         this.setState({
-            selectedTeamIteration: item.id
+            selectedTeamIteration: this.state.teamIterations.find(ti => ti.id === item.id)
+        });
+        this.setState({
+            selectedTeamIterationId: item.id
         });
         this.setState({
             selectedTeamIterationName: item.text ?? ''
@@ -413,7 +438,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const navService = await SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService);
         const hash = await navService.getQueryParams();
 
-        return { queryTeam: hash['selectedTeam'], queryTeamIteration: hash['selectedTeamIteration'] };
+        return { queryTeam: hash['selectedTeam'], queryTeamIteration: hash['selectedTeamIterationId'] };
     }
 
     private showToast = async (message: string): Promise<void> => {
@@ -426,7 +451,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
 
     private updateQueryParams = async () => {
         const navService = await SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService);
-        navService.setQueryParams({ selectedTeam: "" + this.state.selectedTeam, selectedTeamIteration: this.state.selectedTeamIteration });
+        navService.setQueryParams({ selectedTeam: "" + this.state.selectedTeam, selectedTeamIterationId: this.state.selectedTeamIterationId });
         navService.setDocumentTitle("" + this.state.selectedTeamName + " : " + this.state.selectedTeamIterationName + " - Iteration Work Items");
     }
 }
