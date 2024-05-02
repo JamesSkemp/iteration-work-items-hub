@@ -120,7 +120,8 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 url: workItem.url.replace('/_apis/wit/workItems/', '/_workitems/edit/'),
                 boardColumn: workItem.fields['System.BoardColumn'],
                 state: workItem.fields['System.State'],
-                type: workItem.fields['System.WorkItemType']
+                type: workItem.fields['System.WorkItemType'],
+                storyPoints: workItem.fields['Microsoft.VSTS.Scheduling.StoryPoints'] ?? 0
             };
 
             const taskboardColumn = this.state.taskboardWorkItemColumns.find(wic => wic.workItemId === workItem.id);
@@ -150,7 +151,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
                 const workItems = columnMatchingWorkItems.map(workItem => {
                     return (
                         <li key={workItem.id}>
-                            <a href={workItem.url}>{workItem.id}</a> : {workItem.title} - {workItem.assignedTo}
+                            <a href={workItem.url}>{workItem.id}</a> : {workItem.title} {workItem.storyPoints !== 0 && <span>({workItem.storyPoints})</span>} - {workItem.assignedTo}
                         </li>
                     );
                 });
