@@ -43,10 +43,10 @@ module.exports = {
             },
             {
                 test: /\.html$/,
-                loader: "file-loader"
+                loader: "asset/resource"
             },
             {
-                test: /\.woff$/,
+                test: /\.(woff|woff2|eot|ttf|otf)$/,
                 type: 'asset/inline'
             }
         ]
