@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "iteration-work-items-hub",
     "publisher": "JamesSkemp",
-    "version": "1.0.119",
+    "version": "1.0.120",
     "name": "Iteration Work Items Hub",
     "description": "Iteration Work Items Hub supports viewing all items within a Team Iteration in Azure DevOps grouped by type and board state.",
     "categories": [
@@ -31,6 +31,9 @@
     "links": {
         "learn": {
             "uri": "https://git.ebacher-skemp.com/azure-devops/iteration-work-items-hub"
+        },
+        "support": {
+            "uri": "https://github.com/JamesSkemp/iteration-work-items-hub/issues"
         }
     },
     "repository": {
