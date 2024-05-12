@@ -112,9 +112,9 @@ class HubContent extends React.Component<{}, IHubContentState> {
         }
 
         function sprintDatesHeading(selectedTeamIteration: TeamSettingsIteration | undefined): JSX.Element | null {
-            if (selectedTeamIteration) {
+            if (selectedTeamIteration && (selectedTeamIteration.attributes.startDate || selectedTeamIteration.attributes.finishDate)) {
                 return (
-                    <p className="iteration-dates">{selectedTeamIteration.attributes.startDate.toLocaleDateString(undefined, { timeZone: 'UTC' })} - {selectedTeamIteration.attributes.finishDate.toLocaleDateString(undefined, { timeZone: 'UTC' })}</p>
+                    <p className="iteration-dates">{selectedTeamIteration.attributes.startDate ? selectedTeamIteration.attributes.startDate.toLocaleDateString(undefined, { timeZone: 'UTC' }) : ''} - {selectedTeamIteration.attributes.finishDate ? selectedTeamIteration.attributes.finishDate.toLocaleDateString(undefined, { timeZone: 'UTC' }) : ''}</p>
                 );
             } else {
                 return null;
