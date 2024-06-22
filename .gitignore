@@ -3,6 +3,9 @@ node_modules/
 dist/
 *.vsix
 
+.stylelintcache
+stylelint.log
+
 # JUNIT testresult
 test-results.xml
 
