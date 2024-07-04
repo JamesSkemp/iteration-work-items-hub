@@ -1,4 +1,5 @@
 # Iteration Work Items Hub
+Iteration Work Items Hub supports viewing all items within a Team Iteration in Azure DevOps grouped by type and board state.
 
 - [Primary Source](https://git.ebacher-skemp.com/azure-devops/iteration-work-items-hub)
 - [Azure DevOps Mirror](https://dev.azure.com/jamesrskemp/azure-devops-extensions/_git/iteration-work-items-hub)
