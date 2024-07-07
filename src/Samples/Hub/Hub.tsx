@@ -478,7 +478,7 @@ class HubContent extends React.Component<{}, IHubContentState> {
         const accessToken = await SDK.getAccessToken();
         const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
         const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, accessToken);
-        await dataManager.setValue("selectedTeam" + this.state.project, this.state.selectedTeam, {scopeType: "User"}).then((_value) => {
+        await dataManager.setValue("selectedTeam" + this.state.project, this.state.selectedTeam, {scopeType: "User"}).then(() => {
             // No need to return anything.
         });
     }

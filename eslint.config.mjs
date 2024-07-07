@@ -18,4 +18,21 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   pluginReactConfig,
+  { files: ["**/*.tsx"],
+    rules: {
+      '@typescript-eslint/ban-types': [
+        'error',
+        {
+          extendDefaults: true,
+          types: {
+            /*
+              Fine to exclude {} for React
+              See https://github.com/typescript-eslint/typescript-eslint/issues/2063#issuecomment-675156492
+            */
+            '{}': false,
+          },
+        },
+      ],
+    },
+  },
 ];
